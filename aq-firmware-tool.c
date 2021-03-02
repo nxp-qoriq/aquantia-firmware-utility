@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 	phyid = AQ_API_MDIO_Read(port.PHY_ID, 0x1e, 2);
 	phyid = (phyid << 16) | AQ_API_MDIO_Read(port.PHY_ID, 0x1e, 3);
 	for (i = 0; i < countof(aq_devs); i++) {
-		if (aq_devs[i].id == phyid) {
+		if ((aq_devs[i].id & 0xfffffff0) == (phyid & 0xfffffff0)) {
 			printf("Found %s ethernet phy (%#x) !\n", aq_devs[i].name, phyid);
 			port.device = aq_devs[i].dev;
 			phy_is_supported = 1;
