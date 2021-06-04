@@ -128,8 +128,9 @@ typedef struct {
  * a function of the endianness of the platform; on big-endian systems the 
  * reverse-packed structs should be used, and on little-endian systems the 
  * non-reverse-packed structs should be used. */
-/*#define AQ_REVERSED_BITFIELD_ORDERING*/
-
+#if __BYTE_ORDER == __BIG_ENDIAN
+#define AQ_REVERSED_BITFIELD_ORDERING
+#endif
 
 /*! If defined, AQ_API_MDIO_Write_Multi function in AQ_PhyInterface needs to be 
  * implemented. 
