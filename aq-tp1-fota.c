@@ -36,6 +36,7 @@ struct {
 	{0x03a1b662, AQ_DEVICE_CAL, "AQR112C"},
 	{0x31c31c12, AQ_DEVICE_RHEA, "AQR113C"},
 	{0x31c31c42, AQ_DEVICE_RHEA, "AQR113"},
+	{0x31c31c63, AQ_DEVICE_RHEA, "AQR115"},
 	{-1, AQ_DEVICE_HHD, "generic 28nm"},
 };
 
@@ -96,7 +97,7 @@ int32_t aqr_fota_check_and_update(uint8_t *filename)
 	AQ_API_Port port;
 	uint8_t file_aq_version[AQ_VER_STRING_SIZE + 1];
 	uint8_t dram_aq_version[AQ_VER_STRING_SIZE + 1];
-	
+
 	int fd, phyid, phy_is_supported = 0;
 	int ret, i;
 
@@ -107,7 +108,7 @@ int32_t aqr_fota_check_and_update(uint8_t *filename)
 	/* parameter sanity */
 	if (!filename)
 		return -1;
-	
+
 	/* load firmware into memory */
 	firmware = fopen((const char *)filename, "rb");
 	if (!firmware) {
@@ -126,7 +127,7 @@ int32_t aqr_fota_check_and_update(uint8_t *filename)
 	file_crc = *(char *)(imageAddr + imageLen - 2) << 8;
 	file_crc |= *(char *)(imageAddr + imageLen - 1);
 	calculated_crc = calculateCRC((const uint8_t *) imageAddr, 0, imageLen - 2);
-	
+
 	if (file_crc != calculated_crc) {
 		debug_printf("Invalid file\n");
 		return -1;
@@ -206,21 +207,21 @@ int32_t aqr_fota_check_and_update(uint8_t *filename)
 	memcpy(file_aq_version,
 		   imageAddr + dram_offset + AQ_VER_STRING_OFFSET,
 		   AQ_VER_STRING_SIZE);
-	
+
 	debug_printf("File firmware version is '%s'\n", file_aq_version);
 	debug_printf("Dram firmware version is '%s'\n", dram_aq_version);
-	
+
 	if (!memcmp(file_aq_version, dram_aq_version, AQ_VER_STRING_SIZE)) {
 		debug_printf("No upgrade required.\n");
 		free(imageAddr);
 		return -1;
 	}
-	
+
 	debug_printf("Upgrade required. Running firmware is different than %s !\n", filename);
 
 	ret = AQ_API_WriteAndVerifyFlashImage (&port, &imageLen, imageAddr);
 	free(imageAddr);
-	
+
 	switch (ret) {
 	case 0:
 		debug_printf("Device burned and verified\n");
@@ -332,7 +333,7 @@ int32_t aqr_fota_image_upgrade_status(void)
 			debug_printf("DRAM signature and running firmare version mismatch !\n");
 			return -1;
 		}
-	
+
 	debug_printf("%s running firmware version %x.%x.%x\n",
 		aq_devs[i].name,
 		phy_ver.major,
