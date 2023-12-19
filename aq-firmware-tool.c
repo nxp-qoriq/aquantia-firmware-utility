@@ -62,7 +62,7 @@ struct firmware_version {
 
 int main(int argc, char **argv)
 {
-	int fd;
+	int fd, sd;
 	struct sockaddr_nl local, kernel;
 
 	AQ_API_Port port;
@@ -84,8 +84,19 @@ int main(int argc, char **argv)
 	printf("Aquantia firmware upgrade utility\n");
 
 	/* parameter sanity */
-	if (argc < 4) {
-		printf("Usage:\n\t %s <firmware file> <bus name> <addr>\n\n", argv[0]);
+	if (argc < 5) {
+		printf("Usage:\n");
+		printf("\t%s <firmware file> -m/--mdio-bus <bus name> <addr>\n", argv[0]);
+		printf("\t%s <firmware file> -i/--interface <NIC name> <addr>\n", argv[0]);
+		return -1;
+	}
+
+	if (!strcmp(argv[2], "-i") || !strcmp(argv[2], "--interface")) {
+		port.PHY_ID.dev_ioctl = true;
+	} else if (!strcmp(argv[2], "-m") || !strcmp(argv[2], "--mdio-bus")) {
+		port.PHY_ID.dev_ioctl = false;
+	} else {
+		printf("Unknow parameter: %s\n", argv[2]);
 		return -1;
 	}
 
@@ -104,29 +115,40 @@ int main(int argc, char **argv)
 	fread(imageAddr, imageLen, 1, firmware_file);
 	fclose(firmware_file);
 
-	/* setup netlink sockets */
-	fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_USERSOCK);
+	if (port.PHY_ID.dev_ioctl) {
+		sd = socket(AF_INET, SOCK_DGRAM, 0);
+		if (sd < 0) {
+			printf("%s create socket failed\n", __func__);
+			return -1;
+		}
+		port.PHY_ID.sd = sd;
+		/* set the name of NIC */
+		strncpy(port.PHY_ID.if_name, argv[3], 99);
+	} else {
+		/* setup netlink sockets */
+		fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_USERSOCK);
 
-	memset(&local, 0, sizeof(local));
-	local.nl_family = AF_NETLINK;
-	local.nl_pid = getpid();
-	local.nl_groups = 0;
+		memset(&local, 0, sizeof(local));
+		local.nl_family = AF_NETLINK;
+		local.nl_pid = getpid();
+		local.nl_groups = 0;
 
-	if (bind(fd, (struct sockaddr *) &local, sizeof(local)) < 0) {
+		if (bind(fd, (struct sockaddr *) &local, sizeof(local)) < 0) {
 			perror("bind");
 			return -1;
+		}
+
+		memset(&kernel, 0, sizeof(kernel));
+		kernel.nl_family = AF_NETLINK;
+		kernel.nl_pid = 0; /* kernel expects 0 */
+		kernel.nl_groups = 0;
+
+		port.PHY_ID.fd = fd;
+		memcpy(&port.PHY_ID.saddr, &kernel, sizeof(struct sockaddr_nl));
+		/* setup mdio bus name */
+		strncpy(port.PHY_ID.bus_name, argv[3], 99);
 	}
-
-	memset(&kernel, 0, sizeof(kernel));
-	kernel.nl_family = AF_NETLINK;
-	kernel.nl_pid = 0; /* kernel expects 0 */
-	kernel.nl_groups = 0;
-
-	/* setup mdio bus, address */
-	strncpy(port.PHY_ID.bus_name, argv[2], 99);
-	port.PHY_ID.addr = strtol(argv[3], NULL, 16);
-	port.PHY_ID.fd = fd;
-	memcpy(&port.PHY_ID.saddr, &kernel, sizeof(struct sockaddr_nl));
+	port.PHY_ID.addr = strtol(argv[4], NULL, 16);
 	port.device = AQ_DEVICE_HHD;
 
 	phyid = AQ_API_MDIO_Read(port.PHY_ID, 0x1e, 2);

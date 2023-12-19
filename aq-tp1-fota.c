@@ -165,6 +165,7 @@ int32_t aqr_fota_check_and_update(uint8_t *filename)
 
 	/* set default PHY type to HHD */
 	port.device = AQ_DEVICE_HHD;
+	port.PHY_ID.dev_ioctl = false;
 
 	/* check if we find a supported phy */
 	phyid = AQ_API_MDIO_Read(port.PHY_ID, 0x1e, 2);
@@ -294,6 +295,7 @@ int32_t aqr_fota_image_upgrade_status(void)
 
 	/* set default PHY type to HHD */
 	port.device = AQ_DEVICE_HHD;
+	port.PHY_ID.dev_ioctl = false;
 
 	/* check if we find a supported phy */
 	phyid = AQ_API_MDIO_Read(port.PHY_ID, 0x1e, 2);

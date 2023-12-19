@@ -52,7 +52,7 @@
 #include <linux/types.h>
 #include <linux/netlink.h>
 #include <sys/socket.h>
-
+#include <stdbool.h>
 
 /*! \defgroup User User Definitions
 This module contains the definitions used to configure AQ_API behavior as desired. */
@@ -62,9 +62,16 @@ This module contains the definitions used to configure AQ_API behavior as desire
 /*! Specify the proper data type for AQ_Port. This will depend on the
  * platform-specific implementation of the PHY register read/write functions.*/
 typedef struct {
-	char bus_name[100];
+	bool dev_ioctl;
+	union {
+		char bus_name[100];
+		char if_name[100];
+	};
 	uint16_t addr;
-	int fd;
+	union {
+		int fd;
+		int sd;
+	};
 	struct sockaddr_nl saddr;
 } AQ_Port;
 
